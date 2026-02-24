@@ -1,8 +1,50 @@
-from lib.search_utils import load_movies, load_stopwords
+from lib.search_utils import load_movies, load_stopwords, CACHE_PATH
 import string
+import pickle
 from nltk.stem import PorterStemmer
+from collections import defaultdict
+import os
 
 stemmer = PorterStemmer()
+
+class InvertedIndex:
+    def __init__(self):
+        self.index = defaultdict(set) # token: [doc_id1, doc_id2]
+        self.docmap = {} # map document ID: document
+        self.index_path = CACHE_PATH/'index.pkl'
+        self.docmap_path = CACHE_PATH/'docmap.pkl'
+
+    def __add_document(self, doc_id, text):
+        tokens = tokenize_text(text)
+        # Want unique tokens
+        for token in set(tokens):
+            self.index[token].add(doc_id)
+
+    def get_documents(self, term):
+        return sorted(list(self.index[term]))
+
+    def build(self):
+        movies = load_movies()
+        for movie in movies:
+            doc_id = movie['id']
+            text = f"{movie['title']} {movie['description']}"
+            self.__add_document(doc_id, text)
+            self.docmap[doc_id] = movie
+
+    def save(self):
+        # pickle saves files in small formats
+        os.makedirs(CACHE_PATH, exist_ok=True)
+        with open(self.index_path, 'wb') as f:
+            pickle.dump(self.index, f)
+        with open(self.docmap_path, 'wb') as f:
+            pickle.dump(self.docmap, f)
+
+def build_command():
+    idx = InvertedIndex()
+    idx.build()
+    idx.save()
+    docs = idx.get_documents("merida")
+    print(f"First document for token 'merida' = {docs[0]}")
 
 def clean_text(text):
     text = text.lower()
