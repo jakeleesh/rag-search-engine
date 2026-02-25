@@ -39,12 +39,16 @@ class InvertedIndex:
         with open(self.docmap_path, 'wb') as f:
             pickle.dump(self.docmap, f)
 
+    def load(self):
+        with open(self.index_path, "rb") as f:
+            self.index = pickle.load(f)
+        with open(self.docmap_path, "rb") as f:
+            self.docmap = pickle.load(f)
+
 def build_command():
     idx = InvertedIndex()
     idx.build()
     idx.save()
-    docs = idx.get_documents("merida")
-    print(f"First document for token 'merida' = {docs[0]}")
 
 def clean_text(text):
     text = text.lower()
@@ -77,14 +81,22 @@ def has_matching_token(query_tokens, movie_tokens):
                 return True
     return False
 
-def search_command(query, n_results):
+def search_command(query, n_results=5):
     movies = load_movies()
-    res = []
+    idx = InvertedIndex()
+    idx.load()
+    # Keep track of ones already seen cause don't want duplicates
+    seen, res = set(), []
     query_tokens = tokenize_text(query)
-    for movie in movies:
-        movie_tokens = tokenize_text(movie['title'])
-        if has_matching_token(query_tokens, movie_tokens):
-            res.append(movie)
-        if len(res) == n_results:
-            break
+    for qt in query_tokens:
+        matching_doc_ids = idx.get_documents(qt)
+        for matching_doc_id in matching_doc_ids:
+            if matching_doc_id in seen:
+                continue
+            seen.add(matching_doc_id)
+            matching_doc = idx.docmap[matching_doc_id]
+            res.append(matching_doc)
+
+            if len(res) >= n_results:
+                return res
     return res
