@@ -1,4 +1,5 @@
 from lib.search_utils import load_movies, load_stopwords, CACHE_PATH
+import math
 import string
 import pickle
 from nltk.stem import PorterStemmer
@@ -34,6 +35,17 @@ class InvertedIndex:
         if len(token) != 1:
             raise ValueError("Can only have 1 tokens")
         return self.term_frequencies[doc_id][token[0]]
+    
+    def get_idf(self, term):
+        token = tokenize_text(term)
+        if len(token) != 1:
+            raise ValueError("Can only have 1 tokens")
+        token = token[0]
+        doc_count = len(self.docmap)
+        # self.index is set, put a token and get list of all doc_id that have that term
+        term_doc_count = len(self.index[token])
+
+        return math.log((doc_count + 1) / (term_doc_count + 1))
 
     def build(self):
         movies = load_movies()
@@ -60,6 +72,12 @@ class InvertedIndex:
             self.docmap = pickle.load(f)
         with open(self.term_frequencies_path, "rb") as f:
             self.term_frequencies = pickle.load(f)
+
+def idf_command(term):
+    idx = InvertedIndex()
+    idx.load()
+    idf = idx.get_idf(term)
+    print(f"Inverse document frequency of '{term}': {idf:.2f}")
 
 def tf_command(doc_id, term):
     idx = InvertedIndex()
