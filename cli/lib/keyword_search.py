@@ -45,6 +45,17 @@ class InvertedIndex:
         # self.index is set, put a token and get list of all doc_id that have that term
         term_doc_count = len(self.index[token])
 
+        return math.log((doc_count - term_doc_count + 0.5) / (term_doc_count + 0.5) + 1)
+    
+    def get_bm25_idf(self, term: str) -> float:
+        token = tokenize_text(term)
+        if len(token) != 1:
+            raise ValueError("Can only have 1 tokens")
+        token = token[0]
+        doc_count = len(self.docmap)
+        # self.index is set, put a token and get list of all doc_id that have that term
+        # How many document contain that term
+        term_doc_count = len(self.index[token])
         return math.log((doc_count + 1) / (term_doc_count + 1))
     
     def get_tfidf(self, doc_id, term):
@@ -77,6 +88,11 @@ class InvertedIndex:
             self.docmap = pickle.load(f)
         with open(self.term_frequencies_path, "rb") as f:
             self.term_frequencies = pickle.load(f)
+
+def bm25_idf_command(term):
+    idx = InvertedIndex()
+    idx.load()
+    return idx.get_bm25_idf(term)
 
 def tfidf_command(doc_id, term):
     idx = InvertedIndex()
