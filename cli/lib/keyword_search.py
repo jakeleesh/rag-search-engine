@@ -46,6 +46,11 @@ class InvertedIndex:
         term_doc_count = len(self.index[token])
 
         return math.log((doc_count + 1) / (term_doc_count + 1))
+    
+    def get_tfidf(self, doc_id, term):
+        tf = self.get_tf(doc_id, term)
+        idf = self.get_idf(term)
+        return tf * idf
 
     def build(self):
         movies = load_movies()
@@ -72,6 +77,12 @@ class InvertedIndex:
             self.docmap = pickle.load(f)
         with open(self.term_frequencies_path, "rb") as f:
             self.term_frequencies = pickle.load(f)
+
+def tfidf_command(doc_id, term):
+    idx = InvertedIndex()
+    idx.load()
+    tf_idf = idx.get_tfidf(doc_id, term)
+    print(f"TF-IDF score of '{term}' in document '{doc_id}': {tf_idf:.2f}")
 
 def idf_command(term):
     idx = InvertedIndex()
