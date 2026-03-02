@@ -2,9 +2,10 @@ import json
 # Common way is os library
 from pathlib import Path
 
+BM25_K1 = 1.5
 
 # Start from current file
-# Going uo to cli
+# Going up to cli
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_PATH = PROJECT_ROOT/'data'
 MOVIES_PATH = DATA_PATH/'movies.json'

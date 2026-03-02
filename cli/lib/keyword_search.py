@@ -1,4 +1,4 @@
-from lib.search_utils import load_movies, load_stopwords, CACHE_PATH
+from lib.search_utils import load_movies, load_stopwords, CACHE_PATH, BM25_K1
 import math
 import string
 import pickle
@@ -35,6 +35,10 @@ class InvertedIndex:
         if len(token) != 1:
             raise ValueError("Can only have 1 tokens")
         return self.term_frequencies[doc_id][token[0]]
+    
+    def get_bm25_tf(self, doc_id, term, k1=BM25_K1):
+        tf = self.get_tf(doc_id, term)
+        return (tf * (k1 + 1)) / (tf + k1)
     
     def get_idf(self, term):
         token = tokenize_text(term)
@@ -88,6 +92,11 @@ class InvertedIndex:
             self.docmap = pickle.load(f)
         with open(self.term_frequencies_path, "rb") as f:
             self.term_frequencies = pickle.load(f)
+
+def bm25_tf_command(doc_id, term, k1=BM25_K1):
+    idx = InvertedIndex()
+    idx.load()
+    return idx.get_bm25_tf(doc_id, term, k1)
 
 def bm25_idf_command(term):
     idx = InvertedIndex()
