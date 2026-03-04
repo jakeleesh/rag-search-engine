@@ -64,6 +64,22 @@ class SemanticSearch:
                 }
             )
         return res
+
+def fixed_sized_chunking(text, chunk_size=200):
+    words = text.split()
+    chunks = []
+    # Start at 0 and jump by chunk_size
+    # words[0:200], words[200:400]
+    for i in range(0, len(words), chunk_size):
+        # split into a list, want to put it back into text
+        chunks.append(" ".join(words[i:i+chunk_size]))
+    return chunks
+
+def chunk_text(text, chunk_size=200):
+    chunks = fixed_sized_chunking(text, chunk_size)
+    print(f"Chunking {len(text)} characters")
+    for i, chunk in enumerate(chunks):
+        print(f"{i+1}. {chunk}")
     
 def search(query, limit=5):
     ss = SemanticSearch()
