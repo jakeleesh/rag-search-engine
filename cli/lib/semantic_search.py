@@ -65,18 +65,24 @@ class SemanticSearch:
             )
         return res
 
-def fixed_sized_chunking(text, chunk_size=200):
+def fixed_sized_chunking(text, overlap, chunk_size=200):
     words = text.split()
     chunks = []
+    step_size = chunk_size - overlap
     # Start at 0 and jump by chunk_size
     # words[0:200], words[200:400]
-    for i in range(0, len(words), chunk_size):
+    for i in range(0, len(words), step_size):
+        chunk_words = words[i:i+chunk_size]
+        # Edge Case: last chunk only has overlap
+        # Don't want because chunk doesn't help, already enconded
+        if len(chunk_words) <= overlap:
+            break
         # split into a list, want to put it back into text
-        chunks.append(" ".join(words[i:i+chunk_size]))
+        chunks.append(" ".join(chunk_words))
     return chunks
 
-def chunk_text(text, chunk_size=200):
-    chunks = fixed_sized_chunking(text, chunk_size)
+def chunk_text(text, overlap, chunk_size=200):
+    chunks = fixed_sized_chunking(text, overlap, chunk_size)
     print(f"Chunking {len(text)} characters")
     for i, chunk in enumerate(chunks):
         print(f"{i+1}. {chunk}")
