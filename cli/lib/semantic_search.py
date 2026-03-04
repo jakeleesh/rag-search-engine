@@ -43,6 +43,46 @@ class SemanticSearch:
             raise ValueError("Must have text to create an embedding")
         # Only care about first element because only passing in one input
         return self.model.encode([text])[0]
+    
+    def search(self, query, limit):
+        if self.embeddings is None:
+            raise ValueError("No embeddings loaded. Call `load_or_create_embeddings` first.")
+        qry_emb = self.generate_embedding(query)
+
+        similarities = []
+        for doc_emb, doc in zip(self.embeddings, self.documents):
+            _similarity = cosine_similarity(qry_emb, doc_emb)
+            similarities.append((_similarity, doc))
+
+        similarities.sort(key=lambda x: x[0], reverse=True)
+        res = []
+        for sc, doc in similarities[:limit]:
+            res.append(
+                {'score': sc,
+                 'title': doc['title'],
+                 'description': doc['description']
+                }
+            )
+        return res
+    
+def search(query, limit=5):
+    ss = SemanticSearch()
+    movies = load_movies()
+    ss.load_or_create_embeddings(movies)
+    search_results = ss.search(query, limit)
+    for idx, res in enumerate(search_results):
+        print(f"{idx}. {res['title']} (score: {res['score']:.4f})")
+        print(res['description'][:100])
+    
+def cosine_similarity(vec1, vec2):
+    dot_product = np.dot(vec1, vec2)
+    norm1 = np.linalg.norm(vec1)
+    norm2 = np.linalg.norm(vec2)
+
+    if norm1 == 0 or norm2 == 0:
+        return 0.0
+
+    return dot_product / (norm1 * norm2)
 
 def embed_query_text(query):
     ss = SemanticSearch()
