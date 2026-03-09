@@ -177,10 +177,16 @@ def embed_chunks():
     print(f"Generated {len(embeddings)} chunked embeddings")
     
 def semantic_chunking(text, overlap=0, max_chunk_size=4):
+    text = text.strip()
+    if not text:
+        return []
     # Split the text at the whitespace that follows sentence-ending punctuation
     sentences = re.split(r"(?<=[.!?])\s+", text)
+    if len(sentences) == 1 and sentences[0].endswith(('!', '.', '?')):
+        pass
     chunks = []
     step_size = max_chunk_size - overlap
+    sentences = [s.strip() for s in sentences if s]
     for i in range(0, len(sentences), step_size):
         chunk_sentences = sentences[i:i+max_chunk_size]
         if len(chunk_sentences) <= overlap:
