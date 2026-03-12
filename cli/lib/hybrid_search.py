@@ -26,11 +26,14 @@ class HybridSearch:
         # Cutting computation in half
         bm25_results = self._bm25_search(query, limit*500)
         sem_results = self.semantic_search.search_chunks(query, limit*500)
-        combined_results = combine_search_results(bm25_results, sem_results)
+        combined_results = combine_search_results(bm25_results, sem_results, alpha)
         return combined_results
 
     def rrf_search(self, query, k, limit=10):
-        raise NotImplementedError("RRF hybrid search is not implemented yet.")
+        bm25_results = self._bm25_search(query, limit*500)
+        sem_results = self.semantic_search.search_chunks(query, limit*500)
+        combined_results = rrf_combine_search_results(bm25_results, sem_results, k)
+        return combined_results
     
 def hybrid_score(bm25_score, sem_score, alpha=0.5):
     return (alpha * bm25_score) + ((1 - alpha) * sem_score)
@@ -42,7 +45,55 @@ def normalize_search_results(results):
         result['normalized_score'] = norm_scores[idx]
     return results
 
-def combine_search_results(bm2_results, sem_results):
+def rrf_score(rank, k=60):
+    return 1 / (k + rank)
+
+def rrf_final_score(r1, r2, k):
+    if r1 and r2:
+        return rrf_score(r1, k) + rrf_score(r2, k)
+    return 0
+
+def rrf_combine_search_results(bm25_results, sem_results, k):
+    scores = {}
+
+    for rank, result in enumerate(bm25_results, start=1):
+        doc_id = result['doc_id']
+        scores[doc_id] = {
+            'doc_id': doc_id,
+            'bm25_rank': rank,
+            'bn25_score': rrf_score(rank, k),
+            'sem_rank': None,
+            'sem_score': None,
+            'title': result['title'],
+            'description': result['description']
+        }
+    for rank, result in enumerate(sem_results, start=1):
+        doc_id = result['id']
+        # If BM25 didn't exist
+        if doc_id not in scores:
+            scores[doc_id] = {
+            'doc_id': doc_id,
+            'bm25_rank': None,
+            'bn25_score': None,
+            'sem_rank': None,
+            'sem_score': None,
+            'title': result['title'],
+            'description': result['description']
+        }
+        scores[doc_id]['sem_rank'] = rank
+        scores[doc_id]['sem_score'] = rrf_score(rank, k)
+
+    for doc_id in scores.keys():
+        scores[doc_id]['rrf_score'] = rrf_final_score(
+            scores[doc_id]['bm25_rank'],
+            scores[doc_id]['sem_rank'],
+            k
+        )
+
+    results = sorted(list(scores.values()), key=lambda x: x['rrf_score'], reverse=True)
+    return results
+
+def combine_search_results(bm2_results, sem_results, alpha):
     bm25_norm = normalize_search_results(bm2_results)
     sem_norm = normalize_search_results(sem_results)
 
@@ -62,7 +113,6 @@ def combine_search_results(bm2_results, sem_results):
         if doc_id not in combined_norm:
             combined_norm[doc_id] = {
             'doc_id': doc_id,
-
             'bm25_score': 0,
             'sem_score': 0,
             'title': norm['title'],
@@ -72,7 +122,7 @@ def combine_search_results(bm2_results, sem_results):
 
     # Add a Hybrid Score
     for k, v in combined_norm.items():
-        combined_norm[k]['hybrid_score'] = hybrid_score(v['bm25_score'], v['sem_score'])
+        combined_norm[k]['hybrid_score'] = hybrid_score(v['bm25_score'], v['sem_score'], alpha)
 
     results = sorted(combined_norm.values(), key=lambda x: x['hybrid_score'], reverse=True)
     return results
@@ -87,6 +137,16 @@ def weighted_search(query, alpha=0.5, limit=5):
         print(f"BM25: {r['bm25_score']}, Semantic: {r['sem_score']}")
         print(r['description'][:100])
     
+def rrf_search(query, k=60, limit=5):
+    movies = load_movies()
+    hs = HybridSearch(movies)
+    results = hs.rrf_search(query, k, limit)
+    for idx, r in enumerate(results[:limit]):
+        print(f"{idx + 1} {r['title']}")
+        print(f"RRF Score: {r['rrf_score']}")
+        print(f"BM25 rank: {r['bm25_rank']}, Semantic Rank: {r['sem_rank']}")
+        print(r['description'][:100])
+
 def normalize_scores(scores):
     if not scores:
         return []
