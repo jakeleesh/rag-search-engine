@@ -4,6 +4,7 @@ from .keyword_search import InvertedIndex
 from .semantic_search import ChunkedSemanticSearch
 from lib.search_utils import load_movies
 from lib.llm import augment_prompt
+from lib.rerank import individual_rerank
 
 
 class HybridSearch:
@@ -34,7 +35,7 @@ class HybridSearch:
         bm25_results = self._bm25_search(query, limit*500)
         sem_results = self.semantic_search.search_chunks(query, limit*500)
         combined_results = rrf_combine_search_results(bm25_results, sem_results, k)
-        return combined_results
+        return combined_results[:limit]
     
 def hybrid_score(bm25_score, sem_score, alpha=0.5):
     return (alpha * bm25_score) + ((1 - alpha) * sem_score)
@@ -138,7 +139,7 @@ def weighted_search(query, alpha=0.5, limit=5):
         print(f"BM25: {r['bm25_score']}, Semantic: {r['sem_score']}")
         print(r['description'][:100])
     
-def rrf_search(query, k=60, limit=5, enhance=None):
+def rrf_search(query, k=60, limit=5, enhance=None, rerank_method=None):
     movies = load_movies()
     hs = HybridSearch(movies)
     if enhance:
@@ -146,9 +147,16 @@ def rrf_search(query, k=60, limit=5, enhance=None):
         print(f"Enhanced query ({enhance}): '{query}' -> '{new_query}'\n")
         query = new_query
 
-    results = hs.rrf_search(query, k, limit)
+    rrf_limit = limit * 5 if rerank_method else 5
+    results = hs.rrf_search(query, k, rrf_limit)
+    if rerank_method:
+        results = individual_rerank(query, results)
+        print(f"Re-ranking top {limit} results using individual method...")
+    print(f"Reciprocal Rank Fusion Results for 'family movie about bears in the woods' (k={k}):")
     for idx, r in enumerate(results[:limit]):
         print(f"{idx + 1} {r['title']}")
+        if rerank_method:
+            print(f"Re-rank Score: {r['rerank_response']}/10")
         print(f"RRF Score: {r['rrf_score']}")
         print(f"BM25 rank: {r['bm25_rank']}, Semantic Rank: {r['sem_rank']}")
         print(r['description'][:100])
