@@ -4,7 +4,7 @@ from .keyword_search import InvertedIndex
 from .semantic_search import ChunkedSemanticSearch
 from lib.search_utils import load_movies
 from lib.llm import augment_prompt
-from lib.rerank import individual_rerank, batch_rerank
+from lib.rerank import individual_rerank, batch_rerank, cross_encoder_rerank
 
 
 class HybridSearch:
@@ -156,6 +156,10 @@ def rrf_search(query, k=60, limit=5, enhance=None, rerank_method=None):
         case "batch":
             results = batch_rerank(query, results)
             print(f"Re-ranking top {limit} results using batch method...")
+        case "cross_encoder":
+            results = cross_encoder_rerank(query, results)
+            print(f"Re-ranking top {limit} results using cross_encoder method...")
+
         case _:
             pass
     print(f"Reciprocal Rank Fusion Results for 'family movie about bears in the woods' (k={k}):")
@@ -165,8 +169,9 @@ def rrf_search(query, k=60, limit=5, enhance=None, rerank_method=None):
             case "individual":
                 print(f"Re-rank Score: {r['rerank_response']}/10")
             case "batch":
-                results = batch_rerank(query, results)
                 print(f"Re-rank Rank: {r['rerank_score']}")
+            case "cross_encoder":
+                print(f"Cross Encoder Score: {r['cross_encoder_score']}")
             case _:
                 pass
         print(f"RRF Score: {r['rrf_score']}")
