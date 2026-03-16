@@ -24,7 +24,7 @@ def main() -> None:
         choices=["spell", "rewrite", "expand"],
         help="Query enhancement method",
     )
-    rrf_parser.add_argument("--rerank-method", type=str, choices=["individual"], help="Rerank method")
+    rrf_parser.add_argument("--rerank-method", type=str, choices=["individual", "batch"], help="Rerank method")
 
     args = parser.parse_args()
 
