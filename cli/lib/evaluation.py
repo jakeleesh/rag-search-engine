@@ -29,7 +29,9 @@ def evaluate(limit):
                 relevant.append(rrf_result['title'])
         precision = relevant_cnt / limit
         retrieved = ", ".join([r['title'] for r in rrf_results])
+        recall = relevant_cnt / len(exp)
         print(f"- Query: {qry}")
         print(f"  - Precision@{limit}: {precision:.4f}")
+        print(f"  - Precision@{limit}: {recall:.4f}")
         print(f"  - Retrieved: {retrieved}")
         print(f"  - Relevant: {", ".join(relevant)}")
