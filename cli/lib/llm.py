@@ -49,3 +49,6 @@ def answer_question(query, documents):
 
 def summarize_documents(query, documents):
     return _rag(query, documents, 'summarization.md')
+
+def citations_documents(query, documents):
+    return _rag(query, documents, 'answer_with_citations.md')
