@@ -2,6 +2,7 @@ from google import genai
 import os
 from dotenv import load_dotenv
 from lib.search_utils import PROMPT_PATH
+import json
 
 load_dotenv()
 api_key = os.environ.get("GEMINI_API_KEY")
@@ -11,8 +12,8 @@ if not api_key:
 model = 'gemma-3-27b-it'
 client = genai.Client(api_key=api_key)
 
-def generate_content(prompt, query):
-    prompt = prompt.format(query=query)
+def generate_content(prompt, query, **kwargs):
+    prompt = prompt.format(query=query, **kwargs)
     response = client.models.generate_content(model=model, contents=prompt)
     return response.text
 
@@ -29,3 +30,10 @@ def rewrite_query(query):
 
 def expand_query(query):
     return augment_prompt(query, 'expand')
+
+def llm_judge(query, formatted_results):
+    with open(PROMPT_PATH/'llm_judge.md', 'r') as f:
+        prompt = f.read()
+    results =  generate_content(prompt, query, formatted_results=formatted_results)
+    results = json.loads(results)
+    return results

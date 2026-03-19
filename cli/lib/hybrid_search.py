@@ -3,7 +3,7 @@ import os
 from .keyword_search import InvertedIndex
 from .semantic_search import ChunkedSemanticSearch
 from lib.search_utils import load_movies
-from lib.llm import augment_prompt
+from lib.llm import augment_prompt, llm_judge
 from lib.rerank import individual_rerank, batch_rerank, cross_encoder_rerank
 
 
@@ -145,7 +145,7 @@ def weighted_search(query, alpha=0.5, limit=5):
         print(f"BM25: {r['bm25_score']}, Semantic: {r['sem_score']}")
         print(r['description'][:100])
     
-def rrf_search(query, k=60, limit=5, enhance=None, rerank_method=None, debug=None):
+def rrf_search(query, k=60, limit=5, enhance=None, rerank_method=None, debug=None, evaluate=None):
     if debug:
         print(f"Debugging for movie containing {debug}")
     movies = load_movies()
@@ -185,8 +185,10 @@ def rrf_search(query, k=60, limit=5, enhance=None, rerank_method=None, debug=Non
                 found = True
                 break
         print(f"DEBUG: Hybrid Reranking post for {debug} is {idx if found else 'not found'}")
-    for idx, r in enumerate(results[:limit]):
-        print(f"{idx + 1} {r['title']}")
+    if evaluate:
+        formatted_results = []
+    for idx, r in enumerate(results[:limit], start=1):
+        print(f"{idx} {r['title']}")
         match rerank_method:
             case "individual":
                 print(f"Re-rank Score: {r['rerank_response']}/10")
@@ -199,6 +201,13 @@ def rrf_search(query, k=60, limit=5, enhance=None, rerank_method=None, debug=Non
         print(f"RRF Score: {r['rrf_score']}")
         print(f"BM25 rank: {r['bm25_rank']}, Semantic Rank: {r['sem_rank']}")
         print(r['description'][:100])
+        if evaluate:
+            # Don't truncate, different results
+            formatted_results.append(f"<result id={idx}>{r['title']}: {r['description'][:100]}</result>")
+    if evaluate:
+        llm_results = llm_judge(query, "\n".join(formatted_results))
+        for idx, r in enumerate(results[:limit]):
+            print(f"{idx} {r['title']}: {llm_results[idx]}/3")
 
 def normalize_scores(scores):
     if not scores:
