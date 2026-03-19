@@ -31,10 +31,16 @@ class HybridSearch:
         combined_results = combine_search_results(bm25_results, sem_results, alpha)
         return combined_results
 
-    def rrf_search(self, query, k, limit=10):
+    def rrf_search(self, query, k, limit=10, debug=None):
         bm25_results = self._bm25_search(query, limit*500)
         sem_results = self.semantic_search.search_chunks(query, limit*500)
         combined_results = rrf_combine_search_results(bm25_results, sem_results, k)
+        print(f"RRF DEBUG={debug}")
+        if debug:
+            for r in combined_results:
+                if r['title'].lower().strip() in debug.lower().strip():
+                    print(f"Phase 1 Search for {r['title']}:")
+                    print(f"{r['bm25_rank']=} | {r['sem_rank']=}")
         return combined_results[:limit]
     
 def hybrid_score(bm25_score, sem_score, alpha=0.5):
@@ -139,7 +145,9 @@ def weighted_search(query, alpha=0.5, limit=5):
         print(f"BM25: {r['bm25_score']}, Semantic: {r['sem_score']}")
         print(r['description'][:100])
     
-def rrf_search(query, k=60, limit=5, enhance=None, rerank_method=None):
+def rrf_search(query, k=60, limit=5, enhance=None, rerank_method=None, debug=None):
+    if debug:
+        print(f"Debugging for movie containing {debug}")
     movies = load_movies()
     hs = HybridSearch(movies)
     if enhance:
@@ -149,6 +157,13 @@ def rrf_search(query, k=60, limit=5, enhance=None, rerank_method=None):
 
     rrf_limit = limit * 5 if rerank_method else 5
     results = hs.rrf_search(query, k, rrf_limit)
+    if debug:
+        found = False
+        for idx, r in enumerate(results):
+            if debug.lower().strip() in r['title'].lower().strip():
+                found = True
+                break
+        print(f"DEBUG: Hybrid search post for {debug} is {idx if found else 'not found'}")
     match rerank_method:
         case "individual":
             results = individual_rerank(query, results)
@@ -163,6 +178,13 @@ def rrf_search(query, k=60, limit=5, enhance=None, rerank_method=None):
         case _:
             pass
     print(f"Reciprocal Rank Fusion Results for 'family movie about bears in the woods' (k={k}):")
+    if debug:
+        found = False
+        for idx, r in enumerate(results):
+            if debug.lower().strip() in r['title'].lower().strip():
+                found = True
+                break
+        print(f"DEBUG: Hybrid Reranking post for {debug} is {idx if found else 'not found'}")
     for idx, r in enumerate(results[:limit]):
         print(f"{idx + 1} {r['title']}")
         match rerank_method:

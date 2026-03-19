@@ -25,12 +25,13 @@ def main() -> None:
         help="Query enhancement method",
     )
     rrf_parser.add_argument("--rerank-method", type=str, choices=["individual", "batch", "cross_encoder"], help="Rerank method")
+    rrf_parser.add_argument("--debug", type=str, help="A piece of a title to track") # --debug Land Before Time
 
     args = parser.parse_args()
 
     match args.command:
         case "rrf-search":
-            rrf_search(args.query, args.k, args.limit, args.enhance, args.rerank_method)
+            rrf_search(args.query, args.k, args.limit, args.enhance, args.rerank_method, args.debug)
         case "weighted-search":
             weighted_search(args.query, args.alpha, args.limit)
         case "normalize":
